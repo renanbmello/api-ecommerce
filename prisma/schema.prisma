@@ -1,0 +1,62 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id          String   @id @default(uuid()) @map("id")
+  email       String   @unique
+  password    String
+  name        String
+  orders      Order[]
+  cart        Cart?
+}
+
+model Product {
+  id          String   @id @default(uuid()) @map("id")
+  name        String
+  description String
+  price       Float
+  stock       Int
+
+  // Relações inversas para Order e Cart
+  orders      OrderProduct[]
+  carts       CartProduct[]
+}
+
+model Order {
+  id          String         @id @default(uuid()) @map("id")
+  userId      String
+  user        User           @relation(fields: [userId], references: [id])
+  products    OrderProduct[] // Relacionamento many-to-many através da tabela intermediária
+  status      String
+}
+
+model Cart {
+  id          String         @id @default(uuid()) @map("id")
+  userId      String         @unique
+  user        User           @relation(fields: [userId], references: [id])
+  products    CartProduct[]  // Relacionamento many-to-many através da tabela intermediária
+}
+
+model OrderProduct {
+  orderId     String
+  order       Order          @relation(fields: [orderId], references: [id])
+  productId   String
+  product     Product        @relation(fields: [productId], references: [id])
+
+  @@id([orderId, productId]) // Chave composta
+}
+
+model CartProduct {
+  cartId      String
+  cart        Cart           @relation(fields: [cartId], references: [id])
+  productId   String
+  product     Product        @relation(fields: [productId], references: [id])
+
+  @@id([cartId, productId]) // Chave composta
+}
