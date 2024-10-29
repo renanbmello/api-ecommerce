@@ -1,20 +1,36 @@
 services:
-  api:
-    build: .
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ecommerce-api
     ports:
       - "3000:3000"
-    volumes:
-      - .:/app
-      - /app/node_modules
-    depends_on:
-      - postgres
-  postgres:
-    image: postgres
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: password
-      POSTGRES_DB: ecommerce
+      - DATABASE_URL=postgresql://myuser:mypassword@db:5432/mydb?schema=public
     volumes:
-      - postgres_data:/var/lib/postgresql/data
-volumes:
-  postgres_data:
+      - .:/app # Monta o diretório atual em /app
+      - /app/node_modules # Evita que node_modules seja sobrescrito
+    depends_on:
+      - db
+    command: >
+      sh -c "
+      echo 'Starting migrations...' &&
+      npx prisma migrate deploy &&
+      echo 'Generating Prisma Client...' &&
+      npx prisma generate &&
+      echo 'Starting server...' &&
+      npm run dev
+      "
+
+  db:
+    image: postgres:13
+    container_name: e-commerce-db
+    environment:
+      POSTGRES_USER: myuser
+      POSTGRES_PASSWORD: mypassword
+      POSTGRES_DB: mydb
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./data:/var/lib/postgresql/data
