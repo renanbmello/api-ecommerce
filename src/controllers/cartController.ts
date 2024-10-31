@@ -1,75 +1,177 @@
-import { Request, Response } from 'express';
-import { PrismaClient, Product } from '@prisma/client';
+import { Response, NextFunction, RequestHandler } from 'express';
+import { PrismaClient } from '@prisma/client';
+import { AddToCartData, CartProduct } from '../types/cart';
+import { ApplicationError } from '../utils/AppError';
+import { AuthenticatedRequest } from '../types/auth';
 
 const prisma = new PrismaClient();
 
-export const addToCart = async (req: Request, res: Response) => {
-  const { userId } = req.body; // Assumindo que o usuário já está autenticado e o ID está disponível
-  const { productId } = req.body;
+export const addToCart: RequestHandler = async (
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+) => {
+    try {
+        const userId = req.user?.userId;
+        const { productId } = req.body;
 
-  // Verificar se o produto existe
-  const product = await prisma.product.findUnique({ where: { id: productId } });
-  if (!product) {
-    return res.status(404).json({ message: 'Product not found' });
-  }
-
-  // Verificar se o usuário já tem um carrinho
-  let cart = await prisma.cart.findUnique({ where: { userId } });
-  if (!cart) {
-    cart = await prisma.cart.create({
-      data: { userId }
-    });
-  }
-
-  // Adicionar produto ao carrinho
-  await prisma.cartProduct.create({
-    data: {
-      cartId: cart.id,
-      productId: product.id
-    }
-  });
-
-  res.json({ message: 'Product added to cart' });
-};
-
-export const removeFromCart = async (req: Request, res: Response) => {
-  const { userId } = req.body;
-  const { productId } = req.body;
-
-  // Encontrar o carrinho do usuário
-  const cart = await prisma.cart.findUnique({ where: { userId } });
-  if (!cart) {
-    return res.status(404).json({ message: 'Cart not found' });
-  }
-
-  // Remover o produto do carrinho
-  await prisma.cartProduct.deleteMany({
-    where: { cartId: cart.id, productId }
-  });
-
-  res.json({ message: 'Product removed from cart' });
-};
-
-export const getCartProducts = async (req: Request, res: Response) => {
-  const { userId } = req.body;
-
-  // Encontrar o carrinho do usuário
-  const cart = await prisma.cart.findUnique({
-    where: { userId },
-    include: {
-      products: {
-        include: {
-          product: true
+        if (!userId) {
+            throw new ApplicationError('User not authenticated', 401);
         }
-      }
+
+        if (!productId) {
+            throw new ApplicationError('Product ID is required', 400);
+        }
+
+        // Verificar se o produto existe
+        const product = await prisma.product.findUnique({ 
+            where: { id: productId } 
+        });
+
+        if (!product) {
+            throw new ApplicationError('Product not found', 404);
+        }
+
+        // Verificar se o produto tem estoque
+        if (product.stock <= 0) {
+            throw new ApplicationError('Product out of stock', 400);
+        }
+
+        // Buscar ou criar carrinho
+        let cart = await prisma.cart.findUnique({
+            where: { userId },
+            include: {
+                products: true
+            }
+        });
+
+        if (!cart) {
+            cart = await prisma.cart.create({
+                data: {
+                    user: {
+                        connect: { id: userId }
+                    }
+                },
+                include: {
+                    products: true
+                }
+            });
+        }
+
+        // Verificar se o produto já está no carrinho
+        const existingProduct = cart.products.find(p => p.productId === productId);
+        if (existingProduct) {
+            throw new ApplicationError('Product already in cart', 400);
+        }
+
+        // Adicionar produto ao carrinho
+        const cartProduct = await prisma.cartProduct.create({
+            data: {
+                cart: {
+                    connect: { id: cart.id }
+                },
+                product: {
+                    connect: { id: productId }
+                }
+            },
+            include: {
+                product: true
+            }
+        });
+
+        res.status(201).json(cartProduct);
+    } catch (error) {
+        next(error);
     }
-  });
-
-  if (!cart || cart.products.length === 0) {
-    return res.status(404).json({ message: 'Cart is empty' });
-  }
-
-  const cartItems = cart.products.map((cartProduct: { product: Product }) => cartProduct.product);
-
-  res.json(cartItems);
 };
+
+export const getCart: RequestHandler = async (
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+) => {
+    try {
+        const userId = req.user?.userId;
+
+        if (!userId) {
+            throw new ApplicationError('User not authenticated', 401);
+        }
+
+        const cart = await prisma.cart.findUnique({
+            where: { userId },
+            include: {
+                products: {
+                    include: {
+                        product: true
+                    }
+                }
+            }
+        });
+
+        if (!cart) {
+            throw new ApplicationError('Cart not found', 404);
+        }
+
+        res.json(cart);
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const removeFromCart: RequestHandler = async (  
+    req: AuthenticatedRequest, 
+    res: Response, 
+    next: NextFunction
+) => {
+    try {
+        const userId = req.user?.userId;
+        const { productId } = req.params;
+
+        if (!userId) {
+            throw new ApplicationError('User not authenticated', 401);
+        }
+
+        if (!productId) {
+            throw new ApplicationError('Product ID is required', 400);
+        }
+
+        // Buscar o carrinho do usuário
+        const cart = await prisma.cart.findUnique({
+            where: { userId },
+            include: {
+                products: {
+                    include: {
+                        product: true
+                    }
+                }
+            }
+        });
+
+        if (!cart) {
+            throw new ApplicationError('Cart not found', 404);
+        }
+
+        // Verificar se o produto está no carrinho
+        const existingProduct = cart.products.find(p => p.productId === productId);
+        if (!existingProduct) {
+            throw new ApplicationError('Product not found in cart', 404);
+        }
+
+        // Remover o produto do carrinho
+        const removedProduct = await prisma.cartProduct.delete({
+            where: {
+                cartId_productId: {
+                    cartId: cart.id,
+                    productId: productId
+                }
+            }
+        });
+
+        res.status(200).json({
+            message: 'Product removed from cart successfully',
+            removedProduct
+        });
+    } catch (error) {
+        next(error);
+    }
+};   

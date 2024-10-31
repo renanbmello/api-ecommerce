@@ -1,12 +1,12 @@
-// import express from 'express';
-// import { addToCart, getCart } from '../controllers/cartController';
-// import { authenticateToken } from '../middleware/authMiddleware';
+import express from 'express';
+import { addToCart, getCart, removeFromCart } from '../controllers/cartController';
+import { authenticateToken } from '../middleware/authMiddleware';
 
-// const router = express.Router();
+const router = express.Router();
 
-// // Apply authenticateToken middleware to protect these routes
-// router.post('/', authenticateToken, addToCart);
-// // router.delete('/', authenticateToken, removeFromCart);
-// router.get('/', authenticateToken, getCart);
+// Apply authenticateToken middleware to protect these routes
+router.post('/', authenticateToken, addToCart);
+router.get('/', authenticateToken, getCart);
+router.delete('/:productId', authenticateToken, removeFromCart);
 
-// export default router;
+export default router;
