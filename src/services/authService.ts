@@ -2,12 +2,12 @@ import { Request, Response, NextFunction, RequestHandler } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { PrismaClient } from '@prisma/client';
+import { User, UserRegistrationData, UserLoginData } from '../types/user';
 
 const prisma = new PrismaClient();
 const secretKey = process.env.JWT_SECRET || 'secret';
 
-// Corrigindo a função para não retornar Promise
-export const registerUser: RequestHandler = async (req, res, next) => {
+export const registerUser: RequestHandler = async (req: Request<{}, {}, UserRegistrationData>, res, next) => {
     const { email, password, name } = req.body;
 
     try {
@@ -18,7 +18,6 @@ export const registerUser: RequestHandler = async (req, res, next) => {
 
         const token = jwt.sign({ userId: user.id }, secretKey, { expiresIn: '1h' });
 
-        // Enviando resposta diretamente, sem retornar Promise
         res.status(201).json({ token });
     } catch (error: unknown) {
         const errorMessage = (error as Error).message;
@@ -27,7 +26,7 @@ export const registerUser: RequestHandler = async (req, res, next) => {
 };
 
 // Corrigindo a função para não retornar Promise
-export const loginUser: RequestHandler = async (req, res, next) => {
+export const loginUser: RequestHandler = async (req: Request<{}, {}, UserLoginData>, res, next) => {
     const { email, password } = req.body;
 
     try {
