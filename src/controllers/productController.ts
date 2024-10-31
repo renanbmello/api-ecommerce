@@ -1,107 +1,135 @@
 import { NextFunction, Request, Response, RequestHandler } from 'express';
 import { PrismaClient } from '@prisma/client';
+import { Product, CreateProductData, UpdateProductData } from '../types/product';
+import { ApplicationError } from '../utils/AppError';
 
 const prisma = new PrismaClient();
 
-export const createProduct = async (req: Request, res: Response) => {
-    const { name, description, price, stock } = req.body;
-    const product = await prisma.product.create({
-        data: { name, description, price, stock }
-    });
-    res.json(product);
+// Tipagem específica para o request
+interface ProductParams {
+  id: string;
+}
+
+export const createProduct: RequestHandler<{}, {}, CreateProductData> = async (
+    req: Request<{}, {}, CreateProductData>,
+    res: Response,
+    next: NextFunction
+) => {
+    try {
+        const productData: CreateProductData = req.body;
+        const product = await prisma.product.create({
+            data: productData
+        });
+        res.status(201).json(product);
+    } catch (error: unknown) {
+        next(error);
+    }
 };
 
-export const updateStock: RequestHandler = async (req, res, next) => {
-    const { id } = req.params; // ID do produto a ser atualizado
-    const { stock } = req.body; // Nova quantidade de estoque
-
+export const updateStock: RequestHandler<ProductParams, {}, { stock: number }> = async (
+    req,
+    res,
+    next
+) => {
     try {
-        // Verifica se o produto existe
-        const product = await prisma.product.findUnique({ where: { id } });
-        if (!product) {
-            res.status(404).json({ message: 'Product not found' });
-            return;
-        }
+        const { id } = req.params;
+        const { stock } = req.body;
 
-        // Atualiza o estoque do produto
         const updatedProduct = await prisma.product.update({
             where: { id },
             data: { stock }
         });
 
         res.json(updatedProduct);
-    } catch (error: unknown) {
-        const errorMessage = (error as Error).message;
-        res.status(400).json({ error: 'Failed to update stock', details: errorMessage });
+    } catch (error) {
+        next(error);
     }
 };
 
-export const updateProduct: RequestHandler = async (req, res, next) => {
-    const { id } = req.params;
-    const { name, description, price, stock } = req.body;
-
+export const updateProduct: RequestHandler<ProductParams, {}, UpdateProductData> = async (
+    req,
+    res,
+    next
+) => {
     try {
-        const product = await prisma.product.findUnique({ where: { id } });
-        if (!product) {
-            res.status(404).json({ message: 'Product not found' });
-            return;
-        }
+        const { id } = req.params;
+        const updateData: UpdateProductData = req.body;
 
         const updatedProduct = await prisma.product.update({
             where: { id },
-            data: { name, description, price, stock }
+            data: updateData
         });
 
         res.json(updatedProduct);
-    } catch (error: unknown) {
-        const errorMessage = (error as Error).message;
-        res.status(400).json({ error: 'Failed to update product', details: errorMessage });
+    } catch (error) {
+        next(error);
     }
 };
 
-
-export const getAllProducts: RequestHandler = async (req, res, next) => {
+export const getAllProducts: RequestHandler = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+) => {
     try {
         const products = await prisma.product.findMany();
         res.json(products);
     } catch (error: unknown) {
-        const errorMessage = (error as Error).message;
-        res.status(500).json({ error: 'Failed to fetch products', details: errorMessage });
+        next(error);
     }
 };
 
-export const getProductById: RequestHandler = async (req, res, next) => {
-    const { id } = req.params;
-
+export const getProductById: RequestHandler<ProductParams> = async (
+    req: Request<{ id: string }>,
+    res: Response,
+    next: NextFunction
+) => {
     try {
+        const { id } = req.params;
         const product = await prisma.product.findUnique({ where: { id } });
         
         if (!product) {
-            res.status(404).json({ message: 'Product not found' });
-            return;
+            throw new ApplicationError('Product not found', 404);
         }
 
         res.json(product);
-    } catch (error: unknown) {
-        const errorMessage = (error as Error).message;
-        res.status(500).json({ error: 'Failed to fetch product', details: errorMessage });
+    } catch (error) {
+        next(error);
     }
 };
 
-export const deleteProduct: RequestHandler = async (req, res, next) => {
-    const { id } = req.params;
-
+export const deleteProduct: RequestHandler<ProductParams> = async (
+    req: Request<{ id: string }>,
+    res: Response,
+    next: NextFunction
+) => {
     try {
-        const product = await prisma.product.findUnique({ where: { id } });
+        const { id } = req.params;
+        
+        // Primeiro verificamos se o produto existe
+        const product = await prisma.product.findUnique({ 
+            where: { id },
+            include: {
+                orders: true,
+                carts: true
+            }
+        });
+
         if (!product) {
-             res.status(404).json({ message: 'Product not found' });
-             return;
+            throw new ApplicationError('Product not found', 404);
+        }
+
+        // Verificamos se o produto está em algum pedido ou carrinho
+        if (product.orders.length > 0 || product.carts.length > 0) {
+            throw new ApplicationError(
+                'Cannot delete product because it is referenced in orders or carts',
+                400
+            );
         }
 
         await prisma.product.delete({ where: { id } });
-        res.status(204).send(); 
-    } catch (error: unknown) {
-        const errorMessage = (error as Error).message;
-        res.status(500).json({ error: 'Failed to delete product', details: errorMessage });
+        res.status(204).send();
+    } catch (error) {
+        next(error);
     }
 };
