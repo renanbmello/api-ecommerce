@@ -4,60 +4,95 @@ datasource db {
 }
 
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
   binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
 }
 
 model User {
-  id          String   @id @default(uuid()) @map("id")
-  email       String   @unique
-  password    String
-  name        String
-  orders      Order[]
-  cart        Cart?
+  id        String        @id @default(uuid()) @map("id")
+  email     String        @unique
+  password  String
+  name      String
+  orders    Order[]
+  cart      Cart?
+  discounts DiscountUse[]
 }
 
 model Product {
-  id          String   @id @default(uuid()) @map("id")
+  id          String @id @default(uuid()) @map("id")
   name        String
   description String
   price       Float
   stock       Int
 
-  // Relações inversas para Order e Cart
-  orders      OrderProduct[]
-  carts       CartProduct[]
+  orders OrderProduct[]
+  carts  CartProduct[]
 }
 
 model Order {
   id          String         @id @default(uuid()) @map("id")
   userId      String
   user        User           @relation(fields: [userId], references: [id])
-  products    OrderProduct[] 
+  products    OrderProduct[]
   status      String
+  discountId  String? 
+  discount    Discount?      @relation(fields: [discountId], references: [id])
+  discountUse DiscountUse[]
+  subtotal    Float 
+  total       Float 
 }
 
 model Cart {
-  id          String         @id @default(uuid()) @map("id")
-  userId      String         @unique
-  user        User           @relation(fields: [userId], references: [id])
-  products    CartProduct[]  
+  id       String        @id @default(uuid()) @map("id")
+  userId   String        @unique
+  user     User          @relation(fields: [userId], references: [id])
+  products CartProduct[]
 }
 
 model OrderProduct {
-  orderId     String
-  order       Order          @relation(fields: [orderId], references: [id])
-  productId   String
-  product     Product        @relation(fields: [productId], references: [id])
+  orderId   String
+  order     Order   @relation(fields: [orderId], references: [id])
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
 
-  @@id([orderId, productId]) 
+  @@id([orderId, productId])
 }
 
 model CartProduct {
-  cartId      String
-  cart        Cart           @relation(fields: [cartId], references: [id])
-  productId   String
-  product     Product        @relation(fields: [productId], references: [id])
+  cartId    String
+  cart      Cart    @relation(fields: [cartId], references: [id])
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
 
-  @@id([cartId, productId]) 
+  @@id([cartId, productId])
+}
+
+model Discount {
+  id         String   @id @default(uuid())
+  code       String   @unique
+  type       String // PERCENTAGE ou FIXED_AMOUNT
+  value      Float // valor do desconto (em porcentagem ou valor fixo)
+  minValue   Float? // valor mínimo da compra para aplicar o desconto
+  maxUses    Int? // número máximo de usos permitidos
+  usedCount  Int      @default(0)
+  validFrom  DateTime // data de início da validade
+  validUntil DateTime // data de expiração
+  active     Boolean  @default(true)
+
+  // Opcional: rastrear uso dos cupons
+  usedBy DiscountUse[]
+  orders Order[]
+}
+
+model DiscountUse {
+  id         String   @id @default(uuid())
+  discountId String
+  discount   Discount @relation(fields: [discountId], references: [id])
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+  usedAt     DateTime @default(now())
+  orderId    String?
+  order      Order?   @relation(fields: [orderId], references: [id])
+
+  @@unique([discountId, userId, orderId])
 }
