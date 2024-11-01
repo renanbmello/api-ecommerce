@@ -1,5 +1,11 @@
 import express from 'express';
-import { addToCart, calculateCartTotal, getCart, removeFromCart, clearCart, applyDiscount } from '../controllers/cartController';
+import { addToCart, 
+    calculateCartTotal,
+    getCart,
+    removeFromCart,
+    clearCart,
+    applyDiscount
+} from '../controllers/cart';
 import { authenticateToken } from '../middleware/authMiddleware';
 
 const router = express.Router();
