@@ -35,3 +35,7 @@ export interface ProductFilters {
 export interface ProductWithQuantity extends Product {
   quantity: number;
 }
+
+export interface ProductParams {
+  id: string;
+}
