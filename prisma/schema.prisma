@@ -41,6 +41,7 @@ model Order {
   subtotal    Float 
   total       Float 
   createdAt   DateTime      @default(now())  
+  statusHistory OrderStatusHistory[]
 }
 
 model Cart {
@@ -96,4 +97,16 @@ model DiscountUse {
   order      Order?   @relation(fields: [orderId], references: [id])
 
   @@unique([discountId, userId, orderId])
+}
+
+model OrderStatusHistory {
+  id        String   @id @default(uuid())
+  orderId   String
+  order     Order    @relation(fields: [orderId], references: [id])
+  oldStatus String
+  newStatus String
+  changedBy String
+  changedAt DateTime @default(now())
+
+  @@index([orderId])
 }
