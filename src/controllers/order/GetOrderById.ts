@@ -1,4 +1,4 @@
-import { Request, Response, NextFunction } from 'express';
+import { Response, NextFunction } from 'express';
 import { prisma } from '../../lib/prisma';
 import { AuthenticatedRequest } from '../../types/auth';
 import { ApplicationError } from '../../utils/AppError';

@@ -8,11 +8,13 @@ export interface Order {
     subtotal: number;
     total: number;
     discountId?: string;
+    createdAt: Date;
 }
 
 export interface OrderProduct {
     productId: string;
     product: {
+        id: string;
         name: string;
         price: number;
     };
@@ -23,4 +25,13 @@ export enum OrderStatus {
     PROCESSING = 'PROCESSING',
     COMPLETED = 'COMPLETED',
     CANCELLED = 'CANCELLED'
+}
+
+export interface OrderWithDetails extends Order {
+    products: OrderProduct[];
+    discount?: {
+        code: string;
+        type: string;
+        value: number;
+    } | null;
 }
