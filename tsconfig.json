@@ -9,9 +9,16 @@
       "typeRoots": [
         "./node_modules/@types",
         "./src/types"
-      ]
+      ],
+      "baseUrl": "src",
+      "paths": {
+        "@/*": ["*"]
+      }
     },
-    "include": ["src/**/*"],
+    "include": [
+      "src/**/*.ts",
+      "src/**/*.test.ts"
+    ],
     "exclude": ["node_modules"]
   }
   
