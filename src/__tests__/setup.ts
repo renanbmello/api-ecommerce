@@ -1,8 +1,7 @@
-import { PrismaClient } from '@prisma/client';
+import { prisma } from "@/lib/prisma";
 
-// Mock do PrismaClient
-jest.mock('@prisma/client', () => ({
-    PrismaClient: jest.fn().mockImplementation(() => ({
+jest.mock('@/lib/prisma', () => ({
+    prisma: jest.fn().mockImplementation(() => ({
         order: {
             findUnique: jest.fn(),
             delete: jest.fn(),
