@@ -1,20 +1,24 @@
-import express from 'express';
-import { createProduct, 
-    getAllProducts,
-    getProductById,
-    updateProduct,
-    deleteProduct,
-    updateStock } from '../controllers/product';
-import { authenticateToken } from '../middleware/authMiddleware';
+import { Router } from 'express';
+import { createProduct, updateProduct } from '../controllers/product';
+import { validateRequest } from '../middleware/validateRequest';
+import { 
+    createProductRouteSchema, 
+    updateProductRouteSchema 
+} from '../schemas/routeSchemas';
 
-const router = express.Router();
+const router = Router();
 
-router.post('/', authenticateToken, createProduct);
-router.get('/', getAllProducts);
-router.get('/:id', getProductById);
-router.put('/:id', authenticateToken, updateProduct);
-router.delete('/:id', authenticateToken, deleteProduct);
-router.post('/:id/stock', authenticateToken, updateStock);
+router.post(
+    '/',
+    validateRequest(createProductRouteSchema),
+    createProduct
+);
+
+router.put(
+    '/:id',
+    validateRequest(updateProductRouteSchema),
+    updateProduct
+);
 
 export default router;
 
