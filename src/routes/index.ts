@@ -8,16 +8,20 @@ import { validateRequest } from '../middleware/validateRequest';
 
 const router = Router();
 
-router.post('/auth/register', validateRequest(registerSchema), registerUser); 
-router.post('/auth/login', validateRequest(loginSchema), loginUser);
+router.post(
+  '/auth/register', 
+  validateRequest(registerSchema), 
+  registerUser
+); 
+
+router.post(
+  '/auth/login', 
+  validateRequest(loginSchema), 
+  loginUser
+);
 
 router.use('/products', productRoutes);
-
 router.use('/orders', orderRoutes);
-
-
 router.use('/cart', cartRoutes);
-
-
 
 export default router;
