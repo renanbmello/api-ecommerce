@@ -1,4 +1,3 @@
-// Interface principal do produto
 export interface Product {
   id: string;
   name: string;
@@ -7,7 +6,6 @@ export interface Product {
   stock: number;
 }
 
-// Interface para criação de um novo produto
 export interface CreateProductData {
   name: string;
   description: string;
@@ -15,7 +13,6 @@ export interface CreateProductData {
   stock: number;
 }
 
-// Interface para atualização de produto (todos os campos são opcionais)
 export interface UpdateProductData {
   name?: string;
   description?: string;
@@ -23,7 +20,6 @@ export interface UpdateProductData {
   stock?: number;
 }
 
-// Interface para filtros de busca de produtos
 export interface ProductFilters {
   name?: string;
   minPrice?: number;
@@ -31,7 +27,6 @@ export interface ProductFilters {
   inStock?: boolean;
 }
 
-// Interface para produto no carrinho ou ordem
 export interface ProductWithQuantity extends Product {
   quantity: number;
 }
