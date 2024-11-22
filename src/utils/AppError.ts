@@ -8,7 +8,6 @@ export class ApplicationError extends Error implements AppError {
         this.status = status;
         this.name = 'ApplicationError';
         
-        // Necessário para que instanceof funcione corretamente
         Object.setPrototypeOf(this, ApplicationError.prototype);
     }
 }

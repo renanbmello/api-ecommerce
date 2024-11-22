@@ -1,4 +1,3 @@
-// Primeiro, vamos criar os tipos necessários
 export interface AddToCartData {
     productId: string;
 }

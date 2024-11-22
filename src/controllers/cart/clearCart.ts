@@ -16,7 +16,6 @@ export const clearCart: RequestHandler = async (
             throw new ApplicationError('User not authenticated', 401);
         }
 
-        // Usar transação para garantir atomicidade
         const result = await prisma.$transaction(async (tx) => {
             const cart = await tx.cart.findUnique({
                 where: { userId }
@@ -26,14 +25,12 @@ export const clearCart: RequestHandler = async (
                 throw new ApplicationError('Cart not found', 404);
             }
 
-            // Deletar todos os produtos do carrinho
             await tx.cartProduct.deleteMany({
                 where: {
                     cartId: cart.id
                 }
             });
 
-            // Retornar o carrinho atualizado
             return await tx.cart.findUnique({
                 where: { userId },
                 include: {

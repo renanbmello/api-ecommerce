@@ -36,7 +36,6 @@ export const createOrderFromCart = async (
             throw new ApplicationError('Cart is empty', 400);
         }
 
-        // Verificar estoque dos produtos
         for (const cartProduct of cart.products) {
             if (cartProduct.product.stock <= 0) {
                 throw new ApplicationError(
@@ -46,7 +45,6 @@ export const createOrderFromCart = async (
             }
         }
 
-        // Calcular valores
         const subtotal = cart.products.reduce(
             (acc, item) => acc + item.product.price,
             0
@@ -55,7 +53,6 @@ export const createOrderFromCart = async (
         let total = subtotal;
         let discount = null;
 
-        // Aplicar desconto se fornecido
         if (discountId) {
             discount = await prisma.discount.findUnique({
                 where: { 
@@ -69,7 +66,6 @@ export const createOrderFromCart = async (
                 throw new ApplicationError('Invalid or expired discount', 400);
             }
 
-            // Calcular desconto
             const discountAmount = discount.type === 'PERCENTAGE'
                 ? subtotal * (discount.value / 100)
                 : discount.value;
@@ -77,9 +73,7 @@ export const createOrderFromCart = async (
             total = Math.max(0, subtotal - discountAmount);
         }
 
-        // Criar pedido usando transação
         const order = await prisma.$transaction(async (tx) => {
-            // 1. Criar o pedido
             const newOrder = await tx.order.create({
                 data: {
                     userId,
@@ -102,7 +96,6 @@ export const createOrderFromCart = async (
                 }
             });
 
-            // 2. Atualizar estoque dos produtos
             for (const cartProduct of cart.products) {
                 await tx.product.update({
                     where: { id: cartProduct.productId },
@@ -114,7 +107,6 @@ export const createOrderFromCart = async (
                 });
             }
 
-            // 3. Se houver desconto, registrar uso
             if (discount) {
                 await tx.discountUse.create({
                     data: {
@@ -134,7 +126,6 @@ export const createOrderFromCart = async (
                 });
             }
 
-            // 4. Limpar o carrinho
             await tx.cartProduct.deleteMany({
                 where: { cartId: cart.id }
             });

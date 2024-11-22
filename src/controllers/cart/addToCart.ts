@@ -1,5 +1,4 @@
 import { Response, NextFunction, RequestHandler } from 'express';
-// import { AddToCartData, CartProduct } from '../types/cart';
 import { ApplicationError } from '../../utils/AppError';
 import { AuthenticatedRequest } from '../../types/auth';
 import { prisma } from '../../lib/prisma';
@@ -22,7 +21,6 @@ export const addToCart: RequestHandler = async (
             throw new ApplicationError('Product ID is required', 400);
         }
 
-        // Verificar se o produto existe
         const product = await prisma.product.findUnique({ 
             where: { id: productId } 
         });
@@ -31,12 +29,10 @@ export const addToCart: RequestHandler = async (
             throw new ApplicationError('Product not found', 404);
         }
 
-        // Verificar se o produto tem estoque
         if (product.stock <= 0) {
             throw new ApplicationError('Product out of stock', 400);
         }
 
-        // Buscar ou criar carrinho
         let cart = await prisma.cart.findUnique({
             where: { userId },
             include: {
@@ -57,13 +53,11 @@ export const addToCart: RequestHandler = async (
             });
         }
 
-        // Verificar se o produto já está no carrinho
         const existingProduct = cart.products.find(p => p.productId === productId);
         if (existingProduct) {
             throw new ApplicationError('Product already in cart', 400);
         }
 
-        // Adicionar produto ao carrinho
         const cartProduct = await prisma.cartProduct.create({
             data: {
                 cart: {

@@ -25,7 +25,6 @@ export const registerUser: RequestHandler = async (req: Request<{}, {}, UserRegi
     }
 };
 
-// Corrigindo a função para não retornar Promise
 export const loginUser: RequestHandler = async (req: Request<{}, {}, UserLoginData>, res, next) => {
     const { email, password } = req.body;
 
@@ -33,18 +32,17 @@ export const loginUser: RequestHandler = async (req: Request<{}, {}, UserLoginDa
         const user = await prisma.user.findUnique({ where: { email } });
         if (!user) {
             res.status(404).json({ message: 'User not found' });
-            return; // Adicionando "return" para evitar múltiplas respostas
+            return;
         }
 
         const isValidPassword = await bcrypt.compare(password, user.password);
         if (!isValidPassword) {
             res.status(401).json({ message: 'Invalid credentials' });
-            return; // Adicionando "return" para evitar múltiplas respostas
+            return; 
         }
 
         const token = jwt.sign({ userId: user.id }, secretKey, { expiresIn: '1h' });
 
-        // Enviando resposta diretamente, sem retornar Promise
         res.json({ token });
     } catch (error: unknown) {
         const errorMessage = (error as Error).message;

@@ -9,7 +9,6 @@ export const deleteOrder = async (req: AuthenticatedRequest, res: Response, next
         const { id } = req.params;  
         const userId = req.user?.userId;
 
-        // Verificar se o pedido existe com suas relações
         const order = await prisma.order.findUnique({
             where: { id },
             include: {
@@ -26,7 +25,6 @@ export const deleteOrder = async (req: AuthenticatedRequest, res: Response, next
             throw new ApplicationError('You are not authorized to delete this order', 403);
         }   
 
-        // Verificar se o pedido pode ser deletado baseado no status
         const deletableStatuses = [OrderStatus.CANCELLED, OrderStatus.PENDING];
         if (!deletableStatuses.includes(order.status as OrderStatus)) {
             throw new ApplicationError(
@@ -35,9 +33,7 @@ export const deleteOrder = async (req: AuthenticatedRequest, res: Response, next
             );
         }
 
-        // Deletar o pedido e suas relações em uma transação
         await prisma.$transaction(async (tx) => {
-            // Se houver desconto aplicado, decrementar o contador de uso
             if (order.discountId) {
                 await tx.discount.update({
                     where: { id: order.discountId },
@@ -49,7 +45,6 @@ export const deleteOrder = async (req: AuthenticatedRequest, res: Response, next
                 });
             }
 
-            // Deletar registros relacionados
             await Promise.all([
                 tx.discountUse.deleteMany({
                     where: { orderId: id }
@@ -59,7 +54,6 @@ export const deleteOrder = async (req: AuthenticatedRequest, res: Response, next
                 })
             ]);
 
-            // Por fim, deletar o pedido
             await tx.order.delete({
                 where: { id }
             });

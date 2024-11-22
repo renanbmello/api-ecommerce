@@ -21,7 +21,6 @@ export const removeFromCart: RequestHandler = async (
             throw new ApplicationError('Product ID is required', 400);
         }
 
-        // Buscar o carrinho do usuário
         const cart = await prisma.cart.findUnique({
             where: { userId },
             include: {
@@ -37,13 +36,11 @@ export const removeFromCart: RequestHandler = async (
             throw new ApplicationError('Cart not found', 404);
         }
 
-        // Verificar se o produto está no carrinho
         const existingProduct = cart.products.find(p => p.productId === productId);
         if (!existingProduct) {
             throw new ApplicationError('Product not found in cart', 404);
         }
 
-        // Remover o produto do carrinho
         const removedProduct = await prisma.cartProduct.delete({
             where: {
                 cartId_productId: {

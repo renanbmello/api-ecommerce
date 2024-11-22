@@ -23,7 +23,6 @@ export const deleteProduct = async (
             throw new ApplicationError('Product not found', 404);
         }
 
-        // Verificamos se o produto está em algum pedido ou carrinho
         if (product.orders.length > 0 || product.carts.length > 0) {
             throw new ApplicationError(
                 'Cannot delete product because it is referenced in orders or carts',
