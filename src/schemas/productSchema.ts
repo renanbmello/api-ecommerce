@@ -28,8 +28,8 @@ export const updateProductSchema = z.object({
 
 export const getProductSchema = z.object({
   params: z.object({
-    productId: z.string().uuid('Invalid product ID'),
-  }),
+    productId: z.string().uuid('Invalid product ID')
+  })
 });
 
 export const listProductsSchema = z.object({
@@ -54,3 +54,5 @@ export type UpdateProductInput = z.infer<typeof updateProductSchema>;
 export type GetProductInput = z.infer<typeof getProductSchema>;
 export type ListProductsInput = z.infer<typeof listProductsSchema>;
 export type UpdateStockInput = z.infer<typeof updateStockSchema>;
+
+export type ProductParams = z.infer<typeof getProductSchema>['params'];
