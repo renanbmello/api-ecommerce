@@ -16,5 +16,8 @@ jest.mock('@/lib/prisma', () => ({
             deleteMany: jest.fn(),
         },
         $transaction: jest.fn(),
+        product: {
+            create: jest.fn()
+        },
     })),
 }));

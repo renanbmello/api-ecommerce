@@ -6,7 +6,6 @@ import { OrderStatus } from '../../../types/order';
 import { NextFunction } from 'express';
 import { ApplicationError } from '../../../utils/AppError';
 
-// Mock do prisma
 jest.mock('../../../lib/prisma', () => ({
     prisma: {
         order: {
@@ -36,7 +35,6 @@ describe('updateOrder', () => {
     });
 
     it('should update order status successfully', async () => {
-        // Arrange
         const mockOrder = {
             id: 'test-order-id',
             userId: 'test-user-id',
@@ -60,10 +58,8 @@ describe('updateOrder', () => {
         (prisma.order.findUnique as jest.Mock).mockResolvedValue(mockOrder);
         (prisma.order.update as jest.Mock).mockResolvedValue(mockUpdatedOrder);
 
-        // Act
         await updateOrder(mockReq, mockRes, mockNext);
 
-        // Assert
         expect(prisma.order.findUnique).toHaveBeenCalledWith({
             where: { id: 'test-order-id' },
             include: {
@@ -94,13 +90,10 @@ describe('updateOrder', () => {
     });
 
     it('should throw error when status is invalid', async () => {
-        // Arrange
         mockReq.body.status = 'INVALID_STATUS';
 
-        // Act
         await updateOrder(mockReq, mockRes, mockNext);
 
-        // Assert
         const error = mockNext.mock.calls[0][0];
         expect(error).toBeInstanceOf(ApplicationError);
         expect(error.message).toBe('Invalid order status');
@@ -108,13 +101,10 @@ describe('updateOrder', () => {
     });
 
     it('should throw error when order is not found', async () => {
-        // Arrange
         (prisma.order.findUnique as jest.Mock).mockResolvedValue(null);
 
-        // Act
         await updateOrder(mockReq, mockRes, mockNext);
 
-        // Assert
         const error = mockNext.mock.calls[0][0];
         expect(error).toBeInstanceOf(ApplicationError);
         expect(error.message).toBe('Order not found');
@@ -122,7 +112,6 @@ describe('updateOrder', () => {
     });
 
     it('should throw error when user is not authorized', async () => {
-        // Arrange
         const mockOrder = {
             id: 'test-order-id',
             userId: 'different-user-id',
@@ -133,10 +122,8 @@ describe('updateOrder', () => {
 
         (prisma.order.findUnique as jest.Mock).mockResolvedValue(mockOrder);
 
-        // Act
         await updateOrder(mockReq, mockRes, mockNext);
 
-        // Assert
         const error = mockNext.mock.calls[0][0];
         expect(error).toBeInstanceOf(ApplicationError);
         expect(error.message).toBe('You are not authorized to update this order');
@@ -144,19 +131,15 @@ describe('updateOrder', () => {
     });
 
     it('should handle database error', async () => {
-        // Arrange
         const dbError = new Error('Database error');
         (prisma.order.findUnique as jest.Mock).mockRejectedValue(dbError);
 
-        // Act
         await updateOrder(mockReq, mockRes, mockNext);
 
-        // Assert
         expect(mockNext).toHaveBeenCalledWith(dbError);
     });
 
     it('should handle database error during update', async () => {
-        // Arrange
         const mockOrder = {
             id: 'test-order-id',
             userId: 'test-user-id',
@@ -169,10 +152,8 @@ describe('updateOrder', () => {
         (prisma.order.findUnique as jest.Mock).mockResolvedValue(mockOrder);
         (prisma.order.update as jest.Mock).mockRejectedValue(dbError);
 
-        // Act
         await updateOrder(mockReq, mockRes, mockNext);
 
-        // Assert
         expect(mockNext).toHaveBeenCalledWith(dbError);
     });
 });
