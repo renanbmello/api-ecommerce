@@ -1,54 +1,53 @@
-import { createMockResponse } from '../../helpers/mockHelpers';
-import { TestAuthenticatedRequest, MockResponse } from '../../types/test.types';
-import { getAllOrders } from '../../../controllers/order/GetAllOrders';
 import { prisma } from '../../../lib/prisma';
+import { getAllOrders } from '../../../controllers/order/GetAllOrders';
+import { createMockResponse } from '../../helpers/mockHelpers';
 import { OrderStatus } from '../../../types/order';
-import { NextFunction } from 'express';
-import { ApplicationError } from '../../../utils/AppError';
 
-// Mock do prisma
 jest.mock('../../../lib/prisma', () => ({
     prisma: {
         order: {
             findMany: jest.fn(),
-        },
-    },
+            count: jest.fn()
+        }
+    }
 }));
 
 describe('getAllOrders', () => {
-    let mockReq: TestAuthenticatedRequest;
-    let mockRes: MockResponse;
-    let mockNext: jest.Mock<NextFunction>;
+    const mockReq: any = {
+        user: { userId: 'test-user-id' },
+        query: {}
+    };
+    const mockRes = createMockResponse();
+    const mockNext = jest.fn();
 
     beforeEach(() => {
-        mockReq = {
-            user: { userId: 'test-user-id' },
-            query: {}, // Adicionar query para possíveis filtros
-        } as TestAuthenticatedRequest;
-        mockRes = createMockResponse();
-        mockNext = jest.fn();
-    });
-
-    afterEach(() => {
         jest.clearAllMocks();
     });
 
     it('should return all orders successfully', async () => {
         // Arrange
-        const mockOrders = [
-            {
-                id: 'order-1',
-                userId: 'test-user-id',
-                status: OrderStatus.PENDING,
-                subtotal: 100,
-                total: 100,
-                createdAt: new Date(),
-                updatedAt: new Date(),
-                products: [], // Incluir relacionamentos relevantes
-                discountUse: [],
-            },
-        ];
+        const mockOrders = [{
+            id: '1',
+            status: OrderStatus.PENDING,
+            subtotal: 100,
+            total: 90,
+            createdAt: new Date(),
+            products: [{
+                product: {
+                    id: 'prod1',
+                    name: 'Test Product',
+                    price: 100
+                }
+            }],
+            discount: {
+                code: 'TEST10',
+                type: 'percentage',
+                value: 10
+            }
+        }];
+        
         (prisma.order.findMany as jest.Mock).mockResolvedValue(mockOrders);
+        (prisma.order.count as jest.Mock).mockResolvedValue(1);
 
         // Act
         await getAllOrders(mockReq, mockRes, mockNext);
@@ -56,17 +55,59 @@ describe('getAllOrders', () => {
         // Assert
         expect(prisma.order.findMany).toHaveBeenCalledWith({
             where: { userId: 'test-user-id' },
-            include: expect.any(Object), // Verificar includes se houver
+            include: {
+                products: {
+                    include: {
+                        product: {
+                            select: {
+                                id: true,
+                                name: true,
+                                price: true
+                            }
+                        }
+                    }
+                },
+                discount: {
+                    select: {
+                        code: true,
+                        type: true,
+                        value: true
+                    }
+                }
+            },
+            orderBy: {
+                createdAt: 'desc'
+            },
+            skip: 0,
+            take: 10
         });
+        
         expect(mockRes.status).toHaveBeenCalledWith(200);
         expect(mockRes.json).toHaveBeenCalledWith({
-            orders: mockOrders,
+            message: 'Orders retrieved successfully',
+            data: {
+                orders: expect.arrayContaining([
+                    expect.objectContaining({
+                        id: '1',
+                        status: OrderStatus.PENDING,
+                        products: expect.any(Array),
+                        discount: expect.any(Object)
+                    })
+                ]),
+                pagination: {
+                    total: 1,
+                    page: 1,
+                    limit: 10,
+                    totalPages: 1
+                }
+            }
         });
     });
 
     it('should handle empty orders list', async () => {
         // Arrange
         (prisma.order.findMany as jest.Mock).mockResolvedValue([]);
+        (prisma.order.count as jest.Mock).mockResolvedValue(0);
 
         // Act
         await getAllOrders(mockReq, mockRes, mockNext);
@@ -74,19 +115,30 @@ describe('getAllOrders', () => {
         // Assert
         expect(mockRes.status).toHaveBeenCalledWith(200);
         expect(mockRes.json).toHaveBeenCalledWith({
-            orders: [],
+            message: 'Orders retrieved successfully',
+            data: {
+                orders: [],
+                pagination: {
+                    total: 0,
+                    page: 1,
+                    limit: 10,
+                    totalPages: 0
+                }
+            }
         });
     });
 
     it('should handle database error', async () => {
         // Arrange
-        const error = new Error('Database error');
-        (prisma.order.findMany as jest.Mock).mockRejectedValue(error);
+        (prisma.order.findMany as jest.Mock).mockRejectedValue(new Error('Database error'));
+        (prisma.order.count as jest.Mock).mockRejectedValue(new Error('Database error'));
 
         // Act
         await getAllOrders(mockReq, mockRes, mockNext);
 
         // Assert
-        expect(mockNext).toHaveBeenCalledWith(expect.any(ApplicationError));
+        expect(mockNext).toHaveBeenCalledWith(expect.any(Error));
+        expect(mockRes.status).not.toHaveBeenCalled();
+        expect(mockRes.json).not.toHaveBeenCalled();
     });
 }); 
